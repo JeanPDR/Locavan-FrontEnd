@@ -3,46 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Location Tracking</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Real-Time Location Sharing</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://locavan-backend.onrender.com/socket.io/socket.io.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div id="map" style="height: 500px;"></div>
     <script>
-        var socket = io.connect('http://localhost:3000');
-        var map = L.map('map').setView([51.505, -0.09], 13); // Configura a visualização inicial do mapa
+        var socket = io();
+        var map = L.map('map').setView([0, 0], 1);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // Recebe atualizações de localização de outros usuários e atualiza o mapa
+        // Atualizar a localização no mapa quando dados são recebidos do servidor
         socket.on('locationUpdate', function(data) {
-            L.marker([data.lat, data.lng]).addTo(map)
-                .bindPopup(`Localização atualizada: Latitude ${data.lat}, Longitude ${data.lng}`).openPopup();
+            L.marker([data.latitude, data.longitude]).addTo(map)
+                .bindPopup(`Latitude: ${data.latitude}, Longitude: ${data.longitude}`).openPopup();
+            map.setView([data.latitude, data.longitude], 13);
         });
 
-        // Função para enviar a localização atual para o servidor
+        // Função para enviar localização atual para o servidor
         function sendLocation() {
             navigator.geolocation.getCurrentPosition(position => {
-                socket.emit('sendLocation', {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
+                socket.emit('location', {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
                 });
-            }, error => {
-                console.error('Erro ao obter localização:', error);
-            }, {
+            }, (error) => console.error(error), {
                 enableHighAccuracy: true
             });
         }
 
-        // Solicita a localização do usuário e a envia assim que obtida
+        // Enviar localização ao carregar a página
         sendLocation();
-        setInterval(sendLocation, 10000); // Atualiza a localização a cada 10 segundos
+
+        // Continuar enviando localização a cada 10 segundos
+        setInterval(sendLocation, 10000);
     </script>
 </body>
 </html>
